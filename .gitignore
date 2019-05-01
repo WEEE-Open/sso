@@ -1,0 +1,7 @@
+.vagrant/
+*.retry
+roles/*/
+schema/
+ca/*.pem
+ca/*.key
+ca/*.bin
