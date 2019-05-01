@@ -23,8 +23,11 @@ ansible-galaxy install -p roles bertvv.mariadb
 cd roles
 git clone https://github.com/lvps/389ds-server.git
 git clone https://github.com/lvps/389ds-replication.git
-git clone https://github.com/jdennis/ansible-keycloak/tree/oooq-initial
 git clone https://github.com/lvps/ansible-wildfly-mariadb-connector-j.git
+# Until that pull request is merged...
+git clone https://github.com/jdennis/ansible-keycloak
+mv ansible-keycloak nkinder.keycloak
+cd nkinder.keycloak && git checkout -B oooq-initial origin/oooq-initial && cd ..
 cd ..
 ```
 
