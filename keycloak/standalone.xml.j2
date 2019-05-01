@@ -500,7 +500,7 @@
             <spi name="truststore">
                 <provider name="file" enabled="true">
                     <properties>
-                        <property name="file" value="/opt/keycloak/keycloak-6.0.1/standalone/configuration/ldap.jks"/>
+						<property name="file" value="/opt/keycloak/keycloak-{{ my_keycloak_version }}/standalone/configuration/ldap.jks"/>
                         <property name="password" value="password"/>
                         <property name="hostname-verification-policy" value="WILDCARD"/>
                         <property name="disabled" value="false"/>

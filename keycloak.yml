@@ -3,6 +3,9 @@
   vars:
     my_keycloak_version: '6.0.1'
     keycloak_archive_on_target: true
+    # 2.2.3, 2.4.0 and 2.4.1 seemed not to work with Keycloak, in my tests.
+    # This person had success with 2.2.2: https://yoshinorin.net/2018/03/21/keycloak-with-mariadb/
+    wildfly_mariadb_connector_j_version: '2.2.2'
     mariadb_custom_cnf:
       mysqld:
         general-log:
@@ -10,14 +13,11 @@
         log-output: file
 
   roles:
-    # ansible-galaxy install -p roles nkinder.keycloak
-    # Or for the time being: https://github.com/jdennis/ansible-keycloak/tree/oooq-initial
     - {
        role: nkinder.keycloak,
        keycloak_version: "{{ my_keycloak_version }}",
        keycloak_admin_password: "password"
     }
-    # ansible-galaxy install -p roles bertvv.mariadb
     - {
       role: bertvv.mariadb,
       become: true,
@@ -33,11 +33,9 @@
         }
       ]
     }
-    # cd roles && git clone https://github.com/lvps/ansible-wildfly-mariadb-connector-j.git
     - {
       role: ansible-wildfly-mariadb-connector-j,
       become: true,
-      wildfly_mariadb_connector_j_version: '2.2.2',
       wildfly_mariadb_connector_j_path: '/opt/keycloak/keycloak-{{ my_keycloak_version }}/modules/system/layers/keycloak/org/mariadb/jdbc/main/',
       wildfly_mariadb_connector_j_clean_old_files: true
     }
@@ -62,8 +60,7 @@
     - "/opt/keycloak/keycloak-{{ my_keycloak_version }}/modules/system/layers/keycloak/org/mariadb/jdbc"
     - "/opt/keycloak/keycloak-{{ my_keycloak_version }}/modules/system/layers/keycloak/org/mariadb/jdbc/main"
 
-  # TODO: place them in a better place (but really, with certificates from a
-  # trusted CA this is not needed...)
+  # With certificates from a trusted CA this will not be needed...
   - name: Copy LDAP self-signed certificates
     copy:
       src: "ca/{{ item }}"
@@ -87,18 +84,20 @@
       keystore_create: yes
       state: present
     become: true
+    register: keystore_result
     loop:
     - ldap1_example_local_cert.pem
     - ldap2_example_local_cert.pem
 
   - name: Copy standalone.xml
-    copy:
+    template:
       src: "keycloak/standalone.xml"
       dest: "/opt/keycloak/keycloak-{{ my_keycloak_version }}/standalone/configuration/standalone.xml"
       owner: root
       group: root
       mode: 0644
     become: true
+    register: standalone_xml_result
 
   #- name: Create cli script to import certificates
     #copy:
@@ -127,8 +126,10 @@
       name: keycloak
       state: restarted
     become: yes
-    when: wildfly_mariadb_connector_j_changed
+    when: wildfly_mariadb_connector_j_changed.changed or keystore_result.changed or standalone_xml_result.changed
 
+  # Switching to MariaDB = the embedded H2 database is lost, and all users are gone with it.
   - name: create Keycloak admin user, again
     command: "/opt/keycloak/keycloak-{{ my_keycloak_version }}/bin/add-user-keycloak.sh -r master -u admin -p password"
     become: yes
+    when: wildfly_mariadb_connector_j_changed.changed or keystore_result.changed or standalone_xml_result.changed
