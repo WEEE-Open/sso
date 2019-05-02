@@ -91,7 +91,7 @@
 
   - name: Copy standalone.xml
     template:
-      src: "keycloak/standalone.xml"
+      src: "keycloak/standalone.xml.j2"
       dest: "/opt/keycloak/keycloak-{{ my_keycloak_version }}/standalone/configuration/standalone.xml"
       owner: root
       group: root
