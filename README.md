@@ -24,10 +24,10 @@ cd roles
 git clone https://github.com/lvps/389ds-server.git
 git clone https://github.com/lvps/389ds-replication.git
 git clone https://github.com/lvps/ansible-wildfly-mariadb-connector-j.git
-# Until that pull request is merged...
-git clone https://github.com/jdennis/ansible-keycloak
+# Until a new version is released, we need to get the role straight from the master branch
+# instead of using "ansible-galaxy install -p roles nkinder.keycloak"
+git clone https://github.com/nkinder/ansible-keycloak.git
 mv ansible-keycloak nkinder.keycloak
-cd nkinder.keycloak && git checkout -B oooq-initial origin/oooq-initial && cd ..
 cd ..
 ```
 
