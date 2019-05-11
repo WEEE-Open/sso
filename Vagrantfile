@@ -65,4 +65,25 @@ Vagrant.configure("2") do |vagrant|
 	  end
   end
 
+#   vagrant.vm.define "wso2" do |config|
+# 	  config.vm.box = "bento/centos-7"
+# 	  config.vm.hostname = "wso2.example.local"
+# 
+# 	  config.vm.synced_folder ".", "/vagrant", disabled: true
+# 
+# 	  config.vm.network "private_network", ip: "10.38.9.200"
+# 
+# 	  config.vm.provider "virtualbox" do |v|
+# 		  v.name = "wso2-389ds"
+# 		  v.customize ["modifyvm", :id, "--memory", "2048"]
+# 		  v.customize ["modifyvm", :id, "--cpus", "2"]
+# 		  v.customize ["modifyvm", :id, "--ioapic", "on"]
+# 	  end
+# 
+# 	  config.vm.provision "ansible" do |ansible|
+# 		  ansible.verbose = "v"
+# 		  ansible.compatibility_mode = "2.0"
+# 		  ansible.playbook = "wso2.yml"
+# 	  end
+#   end
 end

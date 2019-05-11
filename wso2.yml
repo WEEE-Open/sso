@@ -1,0 +1,22 @@
+---
+- hosts: wso2
+
+  pre_tasks:
+  - name: Set hosts file
+    copy: src=hosts dest=/etc/hosts owner=root group=root
+    become: true
+
+  tasks:
+  - name: Add repo
+    get_url:
+      url: "https://bintray.com/wso2/rpm/rpm"
+      dest: "/etc/yum.repos.d/bintray-wso2-rpm.repo"
+      owner: root
+      group: root
+    become: true
+
+  - name: Install WSO2 Identity Server
+    yum:
+      name: wso2is-5.7.0
+      state: present
+    become: true
