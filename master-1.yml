@@ -77,3 +77,70 @@
         state: absent
         path: "/tmp/other-cert-ansible-managed.crt"
       changed_when: false
+
+  - name: Ensure container entries exist
+    ldap_entry:
+      server_uri: "ldap://localhost"
+      validate_certs: "false"
+      start_tls: "true"
+      bind_dn: "cn=Directory Manager"
+      bind_pw: "{{ rootdn_password }}"
+      dn: "{{ item.dn }}"
+      objectClass: "{{ item.objectClass }}"
+      state: present
+    loop:
+    - { dn: "ou=Groups,dc=example,dc=local", objectClass: ["organizationalunit", "top"] }
+    - { dn: "ou=People,dc=example,dc=local", objectClass: ["organizationalunit", "top"] }
+    - { dn: "ou=Services,dc=example,dc=local", objectClass: ["organizationalunit", "top"] }
+
+  - name: Configure ACIs
+    ldap_attr:
+      server_uri: "ldap://localhost"
+      validate_certs: "false"
+      start_tls: "true"
+      bind_dn: "cn=Directory Manager"
+      bind_pw: "{{ rootdn_password }}"
+      dn: "{{ item.dn }}"
+      state: exact
+      name: "aci"
+      values: "{{ item.acis }}"
+    loop:
+      -
+        dn: "{{ suffix }}"
+        acis:
+          - '(target = "ldap:///{{ suffix }}")(targetfilter = "(ou=*)") (version 3.0; acl "Allow all to read People"; allow (read, search) userdn = "ldap:///all";)'
+      -
+        dn: "ou=People,dc=example,dc=local"
+        acis:
+          - '(targetfilter = "(uid=*)")(targetattr = "objectClass || cn || uid || telegramID || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow Keycloak to read users"; allow (compare, search, read) userdn = "ldap:///cn=Keycloak,ou=Services,dc=example,dc=local";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow Keycloak to change passwords"; allow (write) userdn = "ldap:///cn=Keycloak,ou=Services,dc=example,dc=local";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow users to change their password"; allow (write) userdn = "ldap:///self";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "objectClass || uid || sn || schacPersonalUniqueCode || degreeCourse || schacDateOfBirth || schacPlaceOfBirth || mobile || mail || safetyTestDate || telegramID || telegramNickname || description") (version 3.0; acl "Allow HR to read and edit users"; allow (write, search, compare, add, read) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow HR to change users password"; allow (write) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+          - '(targetfilter = "(uid=*)") (version 3.0; acl "Allow HR to add and remove users"; allow (add, delete) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "memberOf") (version 3.0; acl "Allow HR to read user groups via memberOf"; allow (compare, search, read) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+      -
+        dn: "ou=Groups,dc=example,dc=local"
+        acis:
+          - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember  || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow Keycloak to read groups"; allow (compare, search, read) userdn = "ldap:///cn=Keycloak,ou=Services,dc=example,dc=local";)'
+          - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember") (version 3.0; acl "Allow HR to read groups"; allow (compare, search, read) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+          - '(targetfilter = "(cn=*)")(targetattr = "member || uniqueMember") (version 3.0; acl "Allow HR to add and remove people from groups"; allow (write) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+
+  - name: Configure password policy
+    ldap_attr:
+      server_uri: "ldap://localhost"
+      validate_certs: "false"
+      start_tls: "true"
+      bind_dn: "cn=Directory Manager"
+      bind_pw: "{{ rootdn_password }}"
+      dn: "cn=config"
+      state: exact
+      name: "{{ item.name }}"
+      values: "{{ item.value }}"
+    loop:
+      - { name: "passwordMinLength", value: "16" }
+      - { name: "passwordLockout", value: "on" }
+      - { name: "passwordMaxFailure", value: "6" }
+      - { name: "passwordLockoutDuration", value: "120" }
+      - { name: "passwordLegacyPolicy", value: "off" }
+      - { name: "passwordIsGlobalPolicy", value: "on" }
