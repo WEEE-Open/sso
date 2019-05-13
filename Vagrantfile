@@ -19,6 +19,12 @@ Vagrant.configure("2") do |vagrant|
       ansible.compatibility_mode = "2.0"
       ansible.playbook = "master-1.yml"
     end
+
+	config.vm.provision "acis", type: "ansible", run: "never" do |ansible|
+		ansible.compatibility_mode = "2.0"
+		ansible.playbook = "master-1.yml"
+		ansible.tags = ['acis']
+	end
   end
 
   vagrant.vm.define "mm2" do |config|

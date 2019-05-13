@@ -3,6 +3,8 @@
   become: true
 
   vars:
+    suffix: "dc=example,dc=local"
+    rootdn_password: secret1
     other_cert: "ca/ldap2_example_local_cert.pem"
 
   pre_tasks:
@@ -12,8 +14,6 @@
   roles:
     -
       role: 389ds-server
-      suffix: "dc=example,dc=local"
-      rootdn_password: secret1
       tls_enabled: true
       # ./cert.sh ldap1.example.local
       tls_cert_file: "ca/ldap1_example_local_cert.pem"
@@ -106,25 +106,25 @@
       values: "{{ item.acis }}"
     loop:
       -
-        dn: "{{ suffix }}"
+        dn: "dc=example,dc=local"
         acis:
-          - '(target = "ldap:///{{ suffix }}")(targetfilter = "(ou=*)") (version 3.0; acl "Allow all to read People"; allow (read, search) userdn = "ldap:///all";)'
+          - '(target = "ldap:///dc=example,dc=local")(targetattr = "objectClass") (version 3.0; acl "Allow all to read suffix"; allow (search, read) userdn = "ldap:///all";)'
       -
         dn: "ou=People,dc=example,dc=local"
         acis:
-          - '(targetfilter = "(uid=*)")(targetattr = "objectClass || cn || uid || telegramID || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow Keycloak to read users"; allow (compare, search, read) userdn = "ldap:///cn=Keycloak,ou=Services,dc=example,dc=local";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "objectClass || memberOf || dn || cn || uid || telegramID || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow Keycloak to read users"; allow (search, read, compare) userdn = "ldap:///cn=Keycloak,ou=Services,dc=example,dc=local";)'
           - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow Keycloak to change passwords"; allow (write) userdn = "ldap:///cn=Keycloak,ou=Services,dc=example,dc=local";)'
           - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow users to change their password"; allow (write) userdn = "ldap:///self";)'
-          - '(targetfilter = "(uid=*)")(targetattr = "objectClass || uid || sn || schacPersonalUniqueCode || degreeCourse || schacDateOfBirth || schacPlaceOfBirth || mobile || mail || safetyTestDate || telegramID || telegramNickname || description") (version 3.0; acl "Allow HR to read and edit users"; allow (write, search, compare, add, read) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
-          - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow HR to change users password"; allow (write) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
-          - '(targetfilter = "(uid=*)") (version 3.0; acl "Allow HR to add and remove users"; allow (add, delete) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
-          - '(targetfilter = "(uid=*)")(targetattr = "memberOf") (version 3.0; acl "Allow HR to read user groups via memberOf"; allow (compare, search, read) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "createTimestamp || creatorsName || modifiersName || modifyTimestamp || objectClass || memberOf || uid || sn || schacPersonalUniqueCode || degreeCourse || schacDateOfBirth || schacPlaceOfBirth || mobile || mail || safetyTestDate || telegramID || telegramNickname || description") (version 3.0; acl "Allow HR to read users"; allow (search, read, compare) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+          - '(targetfilter="(&(uid=*)(objectClass=top)(objectClass=inetOrgPerson)(objectClass=organizationalPerson)(objectClass=person)(objectClass=schacPersonalCharacteristics)(objectClass=telegramAccount)(objectClass=weeeOpenPerson))")(targetattr = "objectClass ||  uid || sn || schacPersonalUniqueCode || degreeCourse || schacDateOfBirth || schacPlaceOfBirth || mobile || mail || safetyTestDate || telegramID || telegramNickname || description") (version 3.0; acl "Allow HR to add, edit, delete users"; allow (write, delete, add) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow HR to change users password"; allow (write, add) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
       -
         dn: "ou=Groups,dc=example,dc=local"
         acis:
-          - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember  || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow Keycloak to read groups"; allow (compare, search, read) userdn = "ldap:///cn=Keycloak,ou=Services,dc=example,dc=local";)'
-          - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember") (version 3.0; acl "Allow HR to read groups"; allow (compare, search, read) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+          - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember  || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow Keycloak to read groups"; allow (search, read, compare) userdn = "ldap:///cn=Keycloak,ou=Services,dc=example,dc=local";)'
+          - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember") (version 3.0; acl "Allow HR to read groups"; allow (search, read, compare) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
           - '(targetfilter = "(cn=*)")(targetattr = "member || uniqueMember") (version 3.0; acl "Allow HR to add and remove people from groups"; allow (write) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+    tags: acis
 
   - name: Configure password policy
     ldap_attr:
@@ -144,3 +144,4 @@
       - { name: "passwordLockoutDuration", value: "120" }
       - { name: "passwordLegacyPolicy", value: "off" }
       - { name: "passwordIsGlobalPolicy", value: "on" }
+    tags: passwordpolicy
