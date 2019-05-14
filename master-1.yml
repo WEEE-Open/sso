@@ -138,10 +138,14 @@
       name: "{{ item.name }}"
       values: "{{ item.value }}"
     loop:
+      - { name: "passwordCheckSyntax", value: "on" }
       - { name: "passwordMinLength", value: "16" }
+      # "password minimum number of categories "0" is invalid. The minimum number of categories must range from 1 to 5."
+      # And the reference says the minimum is 0...
+      - { name: "passwordMinCategories", value: "1" }
       - { name: "passwordLockout", value: "on" }
       - { name: "passwordMaxFailure", value: "6" }
       - { name: "passwordLockoutDuration", value: "120" }
       - { name: "passwordLegacyPolicy", value: "off" }
       - { name: "passwordIsGlobalPolicy", value: "on" }
-    tags: passwordpolicy
+    tags: acis
