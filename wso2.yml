@@ -1,13 +1,38 @@
 ---
+# Parts of this playbook taken from https://github.com/wso2/ansible-is/blob/master/roles/is/tasks/main.yml
+#----------------------------------------------------------------------------
+#  Copyright (c) 2019 lvps
+#  Copyright (c) 2018 WSO2, Inc. http://www.wso2.org
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#----------------------------------------------------------------------------
 - hosts: wso2
+
+  vars:
+    wso2is_version: "5.7.0"
 
   pre_tasks:
   - name: Set hosts file
     copy: src=hosts dest=/etc/hosts owner=root group=root
-    become: true
 
   tasks:
-  - name: Add repo
+  - name: Install OpenJDK 8
+    yum:
+      name: java-1.8.0-openjdk-headless
+      state: present
+    become: true
+
+  - name: Add WSO2 repo
     get_url:
       url: "https://bintray.com/wso2/rpm/rpm"
       dest: "/etc/yum.repos.d/bintray-wso2-rpm.repo"
@@ -17,6 +42,43 @@
 
   - name: Install WSO2 Identity Server
     yum:
-      name: wso2is-5.7.0
+      name: wso2is-{{ wso2is_version }}
       state: present
+    become: true
+
+  - name: Create WSO2 group
+    group: name=wso2 state=present gid=802
+    become: true
+
+  - name: Add WSO2 user
+    user: name=wso2 shell=/bin/bash group=wso2 uid=802 # TODO: why /bin/bash?
+    become: true
+
+  - name: Change the owner of WSO2 directory
+    file:
+      path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}"
+      state: directory
+      recurse: true
+      owner: wso2
+      group: wso2
+      mode: 0755
+    become: true
+
+  - name: Copy WSO2IS service file
+    template:
+      src: "wso2/wso2is.service.j2"
+      dest: /etc/systemd/system/wso2is.service
+    become: true
+    register: wso2is_service
+
+  - name: "Reload systemctl daemon"
+    command: systemctl daemon-reload
+    become: true
+    when: wso2is_service.changed
+
+  - name: "Start wso2-is as a service"
+    service:
+      name: wso2is
+      state: started
+      enabled: true
     become: true
