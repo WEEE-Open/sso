@@ -2,16 +2,16 @@ Vagrant.configure("2") do |vagrant|
 
   ENV["LC_ALL"] = "en_US.UTF-8"
 
-  vagrant.vm.define "mm1" do |config|
+  vagrant.vm.define "ldap1" do |config|
     config.vm.box = "bento/centos-7"
-    config.vm.hostname = "ldap1.example.local"
+    config.vm.hostname = "ldap1.sso.local"
 
     config.vm.synced_folder ".", "/vagrant", disabled: true
 
     config.vm.network "private_network", ip: "10.38.9.10"
 
     config.vm.provider "virtualbox" do |v|
-      v.name = "389ds-mm1"
+      v.name = "sso-ldap1"
     end
 
     config.vm.provision "ansible" do |ansible|
@@ -27,16 +27,16 @@ Vagrant.configure("2") do |vagrant|
 	end
   end
 
-  vagrant.vm.define "mm2" do |config|
+  vagrant.vm.define "ldap2" do |config|
 	  config.vm.box = "bento/centos-7"
-	  config.vm.hostname = "ldap2.example.local"
+	  config.vm.hostname = "ldap2.sso.local"
 
 	  config.vm.synced_folder ".", "/vagrant", disabled: true
 
-	  config.vm.network "private_network", ip: "10.38.9.20"
+	  config.vm.network "private_network", ip: "10.55.0.20"
 
 	  config.vm.provider "virtualbox" do |v|
-		  v.name = "389ds-mm2"
+		  v.name = "sso-ldap2"
 		  #v.customize ["modifyvm", :id, "--memory", "1024"]
 		  #v.customize ["modifyvm", :id, "--cpus", "2"]
 		  #v.customize ["modifyvm", :id, "--ioapic", "on"]
@@ -51,7 +51,7 @@ Vagrant.configure("2") do |vagrant|
 
 #   vagrant.vm.define "keycloak" do |config|
 # 	  config.vm.box = "bento/centos-7"
-# 	  config.vm.hostname = "keycloak.example.local"
+# 	  config.vm.hostname = "keycloak.sso.local"
 #
 # 	  config.vm.synced_folder ".", "/vagrant", disabled: true
 #
@@ -71,11 +71,11 @@ Vagrant.configure("2") do |vagrant|
 
   vagrant.vm.define "wso2" do |config|
 	  config.vm.box = "bento/centos-7"
-	  config.vm.hostname = "wso2.example.local"
+	  config.vm.hostname = "wso2.sso.local"
 
 	  config.vm.synced_folder ".", "/vagrant", disabled: true
 
-	  config.vm.network "private_network", ip: "10.38.9.200"
+	  config.vm.network "private_network", ip: "10.55.0.30"
 
 	  config.vm.provider "virtualbox" do |v|
 		  v.name = "wso2-389ds"

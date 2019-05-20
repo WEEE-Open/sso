@@ -6,6 +6,7 @@
     dirsrv_suffix: "dc=example,dc=local"
     dirsrv_rootdn_password: secret1
     other_cert: "ca/ldap2_example_local_cert.pem"
+    dirsrv_tls_certificate_trusted: false
 
   pre_tasks:
   - name: Set hosts file
@@ -16,11 +17,10 @@
       role: 389ds-server
       dirsrv_install_examples: false
       dirsrv_tls_enabled: true
-      # ./cert.sh ldap1.example.local
+      # ./cert.sh ldap1.sso.local
       dirsrv_tls_cert_file: "ca/ldap1_example_local_cert.pem"
       dirsrv_tls_key_file: "ca/ldap1_example_local.key"
       dirsrv_tls_files_remote: false
-      dirsrv_tls_certificate_trusted: false
       dirsrv_tls_enforced: false
       dirsrv_password_storage_scheme: "PBKDF2_SHA256"
       dirsrv_plugins_enabled:
@@ -35,10 +35,9 @@
       dirsrv_replica_role: 'both'
       dirsrv_uri: "ldap://localhost"
       dirsrv_use_starttls: true
-      dirsrv_tls_certificate_public_trusted: false
       dirsrv_replication_user_password: "Sahj0aedolo0aiNgusoo8onu0s"
       dirsrv_replication_user_password_remote: "icauvaelae3reixeiP9ahgh0ei" # On the other server
-      dirsrv_consumer_uri: "ldap://ldap2.example.local:389/" # The other server
+      dirsrv_consumer_uri: "ldap://ldap2.sso.local:389/" # The other server
       dirsrv_supplier_replica_id: 1
 
   tasks:

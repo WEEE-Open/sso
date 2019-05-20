@@ -39,18 +39,18 @@ Finally, you'll need some self-signed certificates...
 
 ```shell
 cd ca
-./cert.sh ldap1.example.local
-./cert.sh ldap2.example.local
+./cert.sh ldap1.sso.local
+./cert.sh ldap2.sso.local
 cd ..
 ```
 
 Now do `vagrant up` and wait for it to bring up 3 machines:
 
-| Vagrant name | Hostname               | IP          |
-|--------------|------------------------|-------------|
-| mm1          | ldap1.example.local    | 10.38.9.10  |
-| mm2          | ldap2.example.local    | 10.38.9.20  |
-| wso2         | wso2.example.local     | 10.38.9.200 |
+| Vagrant name | Hostname           | IP         |
+|--------------|--------------------|------------|
+| mm1          | ldap1.sso.local    | 10.55.0.10 |
+| mm2          | ldap2.sso.local    | 10.55.0.20 |
+| wso2         | wso2.sso.local     | 10.55.0.30 |
 
 There's an `hosts` file that get deployed to the VMs, but you can use it as
 an example to edit your hosts file and reach the 389DS servers and Keycloak
