@@ -1,0 +1,18 @@
+[Unit]
+Description=WSO2 Identity Server
+After=network.target
+
+[Service]
+Environment="JAVA_HOME=/usr/lib/jvm/jre-1.8.0-openjdk"
+Type=forking
+PIDFile=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/wso2carbon.pid
+ExecStart=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/bin/wso2server.sh start
+ExecRestart=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/bin/wso2server.sh restart
+ExecStop=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/bin/wso2server.sh stop
+User=wso2
+Group=wso2
+PrivateTmp=true
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
