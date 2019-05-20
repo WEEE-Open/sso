@@ -3,8 +3,8 @@
   become: true
 
   vars:
-    suffix: "dc=example,dc=local"
-    rootdn_password: secret1
+    dirsrv_suffix: "dc=example,dc=local"
+    dirsrv_rootdn_password: secret1
     other_cert: "ca/ldap2_example_local_cert.pem"
 
   pre_tasks:
@@ -14,34 +14,32 @@
   roles:
     -
       role: 389ds-server
-      tls_enabled: true
+      dirsrv_install_examples: false
+      dirsrv_tls_enabled: true
       # ./cert.sh ldap1.example.local
-      tls_cert_file: "ca/ldap1_example_local_cert.pem"
-      tls_key_file: "ca/ldap1_example_local.key"
-      tls_files_remote: false
-      tls_certificate_trusted: false
-      tls_enforced: true
-      password_storage_scheme: "PBKDF2_SHA256"
-      plugins_enabled:
+      dirsrv_tls_cert_file: "ca/ldap1_example_local_cert.pem"
+      dirsrv_tls_key_file: "ca/ldap1_example_local.key"
+      dirsrv_tls_files_remote: false
+      dirsrv_tls_certificate_trusted: false
+      dirsrv_tls_enforced: false
+      dirsrv_password_storage_scheme: "PBKDF2_SHA256"
+      dirsrv_plugins_enabled:
         MemberOf Plugin: true
-        Distributed Numeric Assignment Plugin: false
-      custom_schema:
+      dirsrv_custom_schema:
       - "schema/97schac.ldif"
       - "schema/98ssh.ldif"
       - "schema/98telegram.ldif"
       - "schema/98weeeopen.ldif"
     -
       role: 389ds-replication
-      replica_role: 'both'
-      suffix: "dc=example,dc=local"
-      server_uri: "ldap://localhost"
-      rootdn_password: secret1
-      use_starttls: true
-      tls_certificate_public_trusted: false
-      replication_user_password: "Sahj0aedolo0aiNgusoo8onu0s"
-      replication_user_password_remote: "icauvaelae3reixeiP9ahgh0ei" # On the other server
-      consumer_uri: "ldap://ldap2.example.local:389/" # The other server
-      supplier_replica_id: 1
+      dirsrv_replica_role: 'both'
+      dirsrv_uri: "ldap://localhost"
+      dirsrv_use_starttls: true
+      dirsrv_tls_certificate_public_trusted: false
+      dirsrv_replication_user_password: "Sahj0aedolo0aiNgusoo8onu0s"
+      dirsrv_replication_user_password_remote: "icauvaelae3reixeiP9ahgh0ei" # On the other server
+      dirsrv_consumer_uri: "ldap://ldap2.example.local:389/" # The other server
+      dirsrv_supplier_replica_id: 1
 
   tasks:
   - block:
@@ -68,7 +66,7 @@
     # Detecting when something changed is too complicated
     - name: Restart 389DS
       service:
-        name: "dirsrv@{{ serverid }}"
+        name: "dirsrv@{{ dirsrv_serverid }}"
         state: restarted
 
     always:
@@ -84,14 +82,16 @@
       validate_certs: "false"
       start_tls: "true"
       bind_dn: "cn=Directory Manager"
-      bind_pw: "{{ rootdn_password }}"
+      bind_pw: "{{ dirsrv_rootdn_password }}"
       dn: "{{ item.dn }}"
       objectClass: "{{ item.objectClass }}"
-      state: present
+      state: "{{ 'present' if item.present else 'absent' }}"
     loop:
-    - { dn: "ou=Groups,dc=example,dc=local", objectClass: ["organizationalunit", "top"] }
-    - { dn: "ou=People,dc=example,dc=local", objectClass: ["organizationalunit", "top"] }
-    - { dn: "ou=Services,dc=example,dc=local", objectClass: ["organizationalunit", "top"] }
+      - { dn: "ou=Groups,dc=example,dc=local", objectClass: ["organizationalunit", "top"], present: true }
+      - { dn: "ou=People,dc=example,dc=local", objectClass: ["organizationalunit", "top"], present: true }
+      - { dn: "ou=Services,dc=example,dc=local", objectClass: ["organizationalunit", "top"], present: true }
+      - { dn: "ou=Special Users,dc=example,dc=local", objectClass: ["organizationalunit", "top"], present: false }
+      - { dn: "ou=Directory Managers,dc=example,dc=local", objectClass: ["organizationalunit", "top"], present: false }
 
   - name: Configure ACIs
     ldap_attr:
@@ -99,31 +99,31 @@
       validate_certs: "false"
       start_tls: "true"
       bind_dn: "cn=Directory Manager"
-      bind_pw: "{{ rootdn_password }}"
+      bind_pw: "{{ dirsrv_rootdn_password }}"
       dn: "{{ item.dn }}"
       state: exact
       name: "aci"
       values: "{{ item.acis }}"
     loop:
       -
-        dn: "dc=example,dc=local"
+        dn: "{{ dirsrv_suffix }}"
         acis:
-          - '(target = "ldap:///dc=example,dc=local")(targetattr = "objectClass") (version 3.0; acl "Allow all to read suffix"; allow (search, read) userdn = "ldap:///all";)'
+          - '(target = "ldap:///{{ dirsrv_suffix }}")(targetattr = "objectClass") (version 3.0; acl "Allow all to read suffix"; allow (search, read) userdn = "ldap:///all";)'
       -
-        dn: "ou=People,dc=example,dc=local"
+        dn: "ou=People,{{ dirsrv_suffix }}"
         acis:
-          - '(targetfilter = "(uid=*)")(targetattr = "objectClass || memberOf || dn || cn || uid || telegramID || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow Keycloak to read users"; allow (search, read, compare) userdn = "ldap:///cn=Keycloak,ou=Services,dc=example,dc=local";)'
-          - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow Keycloak to change passwords"; allow (write) userdn = "ldap:///cn=Keycloak,ou=Services,dc=example,dc=local";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "objectClass || memberOf || dn || cn || uid || telegramID || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow Keycloak to read users"; allow (search, read, compare) userdn = "ldap:///cn=Keycloak,ou=Services,{{ dirsrv_suffix }}";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow Keycloak to change passwords"; allow (write) userdn = "ldap:///cn=Keycloak,ou=Services,{{ dirsrv_suffix }}";)'
           - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow users to change their password"; allow (write) userdn = "ldap:///self";)'
-          - '(targetfilter = "(uid=*)")(targetattr = "createTimestamp || creatorsName || modifiersName || modifyTimestamp || objectClass || memberOf || uid || sn || schacPersonalUniqueCode || degreeCourse || schacDateOfBirth || schacPlaceOfBirth || mobile || mail || safetyTestDate || telegramID || telegramNickname || description") (version 3.0; acl "Allow HR to read users"; allow (search, read, compare) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
-          - '(targetfilter="(&(uid=*)(objectClass=top)(objectClass=inetOrgPerson)(objectClass=organizationalPerson)(objectClass=person)(objectClass=schacPersonalCharacteristics)(objectClass=telegramAccount)(objectClass=weeeOpenPerson))")(targetattr = "objectClass ||  uid || sn || schacPersonalUniqueCode || degreeCourse || schacDateOfBirth || schacPlaceOfBirth || mobile || mail || safetyTestDate || telegramID || telegramNickname || description") (version 3.0; acl "Allow HR to add, edit, delete users"; allow (write, delete, add) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
-          - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow HR to change users password"; allow (write, add) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "createTimestamp || creatorsName || modifiersName || modifyTimestamp || objectClass || memberOf || uid || sn || schacPersonalUniqueCode || degreeCourse || schacDateOfBirth || schacPlaceOfBirth || mobile || mail || safetyTestDate || telegramID || telegramNickname || description") (version 3.0; acl "Allow HR to read users"; allow (search, read, compare) groupdn = "ldap:///cn=HR,ou=Groups,{{ dirsrv_suffix }}";)'
+          - '(targetfilter="(&(uid=*)(objectClass=top)(objectClass=inetOrgPerson)(objectClass=organizationalPerson)(objectClass=person)(objectClass=schacPersonalCharacteristics)(objectClass=telegramAccount)(objectClass=weeeOpenPerson))")(targetattr = "objectClass ||  uid || sn || schacPersonalUniqueCode || degreeCourse || schacDateOfBirth || schacPlaceOfBirth || mobile || mail || safetyTestDate || telegramID || telegramNickname || description") (version 3.0; acl "Allow HR to add, edit, delete users"; allow (write, add, delete) groupdn = "ldap:///cn=HR,ou=Groups,{{ dirsrv_suffix }}";)'
+          - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow HR to change users password"; allow (write, add) groupdn = "ldap:///cn=HR,ou=Groups,{{ dirsrv_suffix }}";)'
       -
-        dn: "ou=Groups,dc=example,dc=local"
+        dn: "ou=Groups,{{ dirsrv_suffix }}"
         acis:
-          - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember  || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow Keycloak to read groups"; allow (search, read, compare) userdn = "ldap:///cn=Keycloak,ou=Services,dc=example,dc=local";)'
-          - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember") (version 3.0; acl "Allow HR to read groups"; allow (search, read, compare) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
-          - '(targetfilter = "(cn=*)")(targetattr = "member || uniqueMember") (version 3.0; acl "Allow HR to add and remove people from groups"; allow (write) groupdn = "ldap:///cn=HR,ou=Groups,dc=example,dc=local";)'
+          - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember  || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow Keycloak to read groups"; allow (search, read, compare) userdn = "ldap:///cn=Keycloak,ou=Services,{{ dirsrv_suffix }}";)'
+          - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember") (version 3.0; acl "Allow HR to read groups"; allow (search, read, compare) groupdn = "ldap:///cn=HR,ou=Groups,{{ dirsrv_suffix }}";)'
+          - '(targetfilter = "(cn=*)")(targetattr = "member || uniqueMember") (version 3.0; acl "Allow HR to add and remove people from groups"; allow (write) groupdn = "ldap:///cn=HR,ou=Groups,{{ dirsrv_suffix }}";)'
     tags: acis
 
   - name: Configure password policy
@@ -132,7 +132,7 @@
       validate_certs: "false"
       start_tls: "true"
       bind_dn: "cn=Directory Manager"
-      bind_pw: "{{ rootdn_password }}"
+      bind_pw: "{{ dirsrv_rootdn_password }}"
       dn: "cn=config"
       state: exact
       name: "{{ item.name }}"
