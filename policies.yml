@@ -1,0 +1,84 @@
+---
+- name: Ensure container entries exist
+  ldap_entry:
+    server_uri: "ldap://localhost"
+    bind_dn: "cn=Directory Manager"
+    bind_pw: "{{ dirsrv_rootdn_password }}"
+    dn: "{{ item.dn }}"
+    objectClass: "{{ item.objectClass }}"
+    state: "{{ 'present' if item.present else 'absent' }}"
+  loop:
+    - { dn: "ou=Groups,{{ dirsrv_suffix }}", objectClass: ["organizationalunit", "top"], present: true }
+    - { dn: "ou=People,{{ dirsrv_suffix }}", objectClass: ["organizationalunit", "top"], present: true }
+    - { dn: "ou=Services,{{ dirsrv_suffix }}", objectClass: ["organizationalunit", "top"], present: true }
+    - { dn: "ou=Special Users,{{ dirsrv_suffix }}", objectClass: ["organizationalunit", "top"], present: false }
+    - { dn: "ou=Directory Managers,{{ dirsrv_suffix }}", objectClass: ["organizationalunit", "top"], present: false }
+  tags: acis
+
+- name: Ensure WSO2IS account exists
+  ldap_entry:
+    server_uri: "ldap://localhost"
+    bind_dn: "cn=Directory Manager"
+    bind_pw: "{{ dirsrv_rootdn_password }}"
+    dn: "cn=WSO2IS,ou=Services,{{ dirsrv_suffix }}"
+    objectClass: ['simpleSecurityObject', 'top', 'device']
+    state: present
+    attributes:
+      # It's "asd" and it's used only in testing, don't bother to crack it
+      userPassword: "{PBKDF2_SHA256}AAAnEM5g1WghZAj9yW9KwYEFl/29Nrxc20gNOtYMc0VUBJ6KGRuCaNbugyPGPEpilQYtogMkriGf699DV6SWKd6KORH5AthjvyCj7YB52So8riV2GT+Ez4Q2FMK0mukxdb4s17xPVsBbIGwQT3o0lGC7sccNt1SX8qVV+2Vt+7wlnE5yXfHiiFLGbypS09mZLzGV5crmBdp9nke09S+mmQDvM46Pb3TTsXJFt/pE5E8lLLpEhRb9I5hPjqLpov+ZLVAEpKpraJ2tFjZR9639WvMXMLbzQ3rY5zRHc8DBpTMpce0FaCC3EFgEPm6VziDrb3Ch9qPv2QYBlalElY+WS67qIjtMDCaYQPbFqGL+PtyIv9qg/Wo7kfqmPcaeaSH3kXnlyo5VAKKFxbs/WjU/05c5hRRcsYPqNNhFtU5JwOLxtdgi hashed password"
+  tags: acis
+
+- name: Configure ACIs
+  ldap_attr:
+    server_uri: "ldap://localhost"
+    bind_dn: "cn=Directory Manager"
+    bind_pw: "{{ dirsrv_rootdn_password }}"
+    dn: "{{ item.dn }}"
+    state: exact
+    name: "aci"
+    values: "{{ item.acis }}"
+  loop:
+    -
+      dn: "{{ dirsrv_suffix }}"
+      acis:
+        - '(target = "ldap:///{{ dirsrv_suffix }}")(targetattr = "objectClass") (version 3.0; acl "Allow all to read suffix"; allow (search, read) userdn = "ldap:///all";)'
+    -
+      dn: "ou=People,{{ dirsrv_suffix }}"
+      acis:
+        - '(targetfilter = "(uid=*)")(targetattr = "objectClass || memberOf || dn || cn || uid || telegramID || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow WSO2IS to read users"; allow (search, compare, read) userdn = "ldap:///cn=WSO2IS,ou=Services,{{ dirsrv_suffix }}";)'
+        - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow WSO2IS to change passwords"; allow (write) userdn = "ldap:///cn=WSO2IS,ou=Services,{{ dirsrv_suffix }}";)'
+        - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow users to change their password"; allow (write) userdn = "ldap:///self";)'
+        - '(targetfilter = "(uid=*)")(targetattr = "createTimestamp || creatorsName || modifiersName || modifyTimestamp || objectClass || memberOf || uid || sn || schacPersonalUniqueCode || degreeCourse || schacDateOfBirth || schacPlaceOfBirth || mobile || mail || safetyTestDate || telegramID || telegramNickname || description") (version 3.0; acl "Allow HR to read users"; allow (search, compare, read) groupdn = "ldap:///cn=HR,ou=Groups,{{ dirsrv_suffix }}";)'
+        - '(targetfilter="(&(uid=*)(objectClass=top)(objectClass=inetOrgPerson)(objectClass=organizationalPerson)(objectClass=person)(objectClass=schacPersonalCharacteristics)(objectClass=telegramAccount)(objectClass=weeeOpenPerson))")(targetattr = "objectClass ||  uid || sn || schacPersonalUniqueCode || degreeCourse || schacDateOfBirth || schacPlaceOfBirth || mobile || mail || safetyTestDate || telegramID || telegramNickname || description") (version 3.0; acl "Allow HR to add, edit, delete users"; allow (write, add, delete) groupdn = "ldap:///cn=HR,ou=Groups,{{ dirsrv_suffix }}";)'
+        - '(targetfilter = "(uid=*)")(targetattr = "userPassword") (version 3.0; acl "Allow HR to change users password"; allow (write, add) groupdn = "ldap:///cn=HR,ou=Groups,{{ dirsrv_suffix }}";)'
+    -
+      dn: "ou=Groups,{{ dirsrv_suffix }}"
+      acis:
+        - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember  || createTimestamp || creatorsName || entrydn || entryid || hasSubordinates || modifiersName || modifyTimestamp || nsUniqueId || numSubordinates || parentid || subschemaSubentry") (version 3.0; acl "Allow WSO2IS to read groups"; allow (search, compare, read) userdn = "ldap:///cn=WSO2IS,ou=Services,{{ dirsrv_suffix }}";)'
+        - '(targetfilter = "(cn=*)")(targetattr = "objectClass || cn || ou || description || member || uniqueMember") (version 3.0; acl "Allow HR to read groups"; allow (search, compare, read) groupdn = "ldap:///cn=HR,ou=Groups,{{ dirsrv_suffix }}";)'
+        - '(targetfilter = "(cn=*)")(targetattr = "member || uniqueMember") (version 3.0; acl "Allow HR to add and remove people from groups"; allow (write) groupdn = "ldap:///cn=HR,ou=Groups,{{ dirsrv_suffix }}";)'
+  tags: acis
+
+- name: Configure password policy
+  ldap_attr:
+    server_uri: "ldap://localhost"
+    validate_certs: "false"
+    start_tls: "true"
+    bind_dn: "cn=Directory Manager"
+    bind_pw: "{{ dirsrv_rootdn_password }}"
+    dn: "cn=config"
+    state: exact
+    name: "{{ item.name }}"
+    values: "{{ item.value }}"
+  loop:
+    - { name: "passwordCheckSyntax", value: "on" }
+    - { name: "passwordMinLength", value: "16" }
+    # "password minimum number of categories "0" is invalid. The minimum number of categories must range from 1 to 5."
+    # And the reference says the minimum is 0...
+    - { name: "passwordMinCategories", value: "1" }
+    - { name: "passwordLockout", value: "on" }
+    - { name: "passwordMaxFailure", value: "6" }
+    - { name: "passwordLockoutDuration", value: "120" }
+    - { name: "passwordLegacyPolicy", value: "off" }
+    - { name: "passwordIsGlobalPolicy", value: "on" }
+  tags: acis

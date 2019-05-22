@@ -1,12 +1,12 @@
 ---
-- hosts: mm2
+- hosts: ldap2
   become: true
 
   vars:
-    dirsrv_suffix: "dc=example,dc=local"
+    dirsrv_suffix: "dc=sso,dc=local"
     dirsrv_rootdn_password: secret2
     dirsrv_tls_certificate_trusted: false
-    other_cert: "ca/ldap1_example_local_cert.pem"
+    other_cert: "ca/ldap1_sso_local_cert.pem"
 
   pre_tasks:
   - name: Set hosts file
@@ -18,8 +18,8 @@
       dirsrv_install_examples: false
       dirsrv_tls_enabled: true
       # ./cert.sh ldap2.sso.local
-      dirsrv_tls_cert_file: "ca/ldap2_example_local_cert.pem"
-      dirsrv_tls_key_file: "ca/ldap2_example_local.key"
+      dirsrv_tls_cert_file: "ca/ldap2_sso_local_cert.pem"
+      dirsrv_tls_key_file: "ca/ldap2_sso_local.key"
       dirsrv_tls_files_remote: false
       dirsrv_tls_enforced: false
       dirsrv_password_storage_scheme: "PBKDF2_SHA256"
@@ -70,3 +70,6 @@
         state: absent
         path: "/tmp/other-cert-ansible-managed.crt"
       changed_when: false
+
+  - name: Apply policies
+    include: policies.yml
