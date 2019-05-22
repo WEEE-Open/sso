@@ -17,9 +17,22 @@
 #  limitations under the License.
 #----------------------------------------------------------------------------
 - hosts: wso2
+  become: true
 
   vars:
+    dirsrv_suffix: dc=sso,dc=local
+
+    wso2is_admin: wso2admin
+    wso2is_admin_password: asd
+    wso2is_ldap_url: "ldap://ldap1.sso.local:389" # TODO: ldaps
     wso2is_version: "5.7.0"
+    wso2is_account: "cn=WSO2IS,ou=Services,{{ dirsrv_suffix }}"
+    wso2is_account_password: "asd"
+    wso2is_people_base: "ou=People,{{ dirsrv_suffix }}"
+    wso2is_user_entry_object_class: "weeeOpenPerson"
+    wso2is_user_dn_pattern: "uid={0},ou=People,{{ dirsrv_suffix }}"
+    wso2is_groups_base: "ou=Groups,{{ dirsrv_suffix }}"
+    wso2is_groups_dn_pattern: "uid={0},ou=Groups,{{ dirsrv_suffix }}"
 
   pre_tasks:
   - name: Set hosts file
@@ -64,6 +77,26 @@
       mode: 0755
     become: true
 
+  - name: Deploy user-mgt.xml.j2
+    template:
+      src: wso2/user-mgt.xml.j2
+      dest: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/user-mgt.xml"
+      owner: wso2
+      group: wso2
+      mode: 0440
+    become: true
+    notify: restart WSO2IS
+
+  - name: Disable embedded LDAP
+    copy:
+      src: wso2/embedded-ldap.xml
+      dest: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/identity/embedded-ldap.xml"
+      owner: wso2
+      group: wso2
+      mode: 0440
+    become: true
+    notify: restart WSO2IS
+
   - name: Copy WSO2IS service file
     template:
       src: "wso2/wso2is.service.j2"
@@ -81,4 +114,11 @@
       name: wso2is
       state: started
       enabled: true
+    become: true
+
+  handlers:
+  - name: restart WSO2IS
+    service:
+      name: wso2is
+      state: restarted
     become: true

@@ -1,0 +1,86 @@
+<!--
+  ~ Copyright lvps,
+  ~ Copyright WSO2, Inc. (http://wso2.com)
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~ http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<UserManager>
+	<Realm>
+		<Configuration>
+		<AddAdmin>false</AddAdmin>
+			<AdminRole>WSO2_Admin</AdminRole>
+			<AdminUser>
+				<UserName>{{ wso2is_admin }}</UserName>
+				<Password>{{ wso2is_admin_password }}</Password>
+			</AdminUser>
+			<EveryOneRoleName>everyone</EveryOneRoleName> <!-- By default users in this role sees the registry root -->
+			<Property name="isCascadeDeleteEnabled">true</Property>
+ <Property name="initializeNewClaimManager">true</Property>
+			<Property name="dataSource">jdbc/WSO2CarbonDB</Property>
+		</Configuration>
+		<UserStoreManager class="org.wso2.carbon.user.core.ldap.ReadWriteLDAPUserStoreManager">
+			<Property name="TenantManager">org.wso2.carbon.user.core.tenant.CommonHybridLDAPTenantManager</Property>
+			<Property name="ConnectionURL">{{ wso2is_ldap_url }}</Property>
+			<Property name="ConnectionName">{{ wso2is_account }}</Property>
+			<Property name="ConnectionPassword">{{ wso2is_account_password }}</Property>
+			<Property name="AnonymousBind">false</Property>
+			<Property name="UserSearchBase">{{ wso2is_people_base }}</Property>
+			<Property name="UserEntryObjectClass">{{ wso2is_people_base }}</Property>
+			<Property name="UserNameAttribute">uid</Property>
+			<Property name="UserNameSearchFilter">(&amp;(objectClass=person)(uid=?))</Property>
+			<Property name="UserNameListFilter">(objectClass=person)</Property>
+			<Property name="UserDNPattern">{{ wso2is_user_dn_pattern }}</Property>
+			<Property name="DisplayNameAttribute">cn</Property>
+			<Property name="ReadGroups">true</Property>
+			<Property name="WriteGroups">true</Property>RoleDNPattern
+			<Property name="GroupSearchBase">{{ wso2is_groups_base }}</Property>
+			<Property name="GroupEntryObjectClass">groupOfNames</Property>
+			<Property name="GroupNameAttribute">cn</Property>
+			<Property name="RoleDNPattern">{{ wso2is_groups_dn_pattern }}</Property>
+			<Property name="GroupNameSearchFilter">(&amp;(objectClass=groupOfNames)(cn=?))</Property>
+			<Property name="GroupNameListFilter">(objectClass=groupOfNames)</Property>
+			<Property name="MembershipAttribute">member</Property>
+			<Property name="MemberOfAttribute">memberOf</Property>
+			<Property name="BackLinksEnabled">true</Property>
+			<Property name="UsernameJavaRegEx">[a-zA-Z0-9._-]{3,30}$</Property>
+			<Property name="UsernameJavaScriptRegEx">^[a-zA-Z0-9._-]{3,30}$</Property>
+			<Property name="UsernameJavaRegExViolationErrorMsg">Username pattern policy violated</Property>
+			<Property name="PasswordJavaRegEx">^.{16,50}$</Property>
+			<Property name="PasswordJavaScriptRegEx">^.{16,50}$</Property>
+			<Property name="PasswordJavaRegExViolationErrorMsg">Password length should be within 16 to 50 characters</Property>
+			<Property name="RolenameJavaRegEx">[a-zA-Z0-9_]{3,50}$</Property>
+			<Property name="RolenameJavaScriptRegEx">^[a-zA-Z0-9_]{3,50}$</Property>
+			<Property name="SCIMEnabled">false</Property>
+			<Property name="IsBulkImportSupported">true</Property>
+			<Property name="EmptyRolesAllowed">true</Property>
+			<Property name="PasswordHashMethod">PLAIN_TEXT</Property>
+			<Property name="MultiAttributeSeparator">,</Property>
+			<Property name="MaxUserNameListLength">100</Property>
+			<Property name="MaxRoleNameListLength">100</Property>
+			<Property name="kdcEnabled">false</Property>
+			<Property name="defaultRealmName">WSO2.ORG</Property>
+			<Property name="UserRolesCacheEnabled">true</Property>
+			<Property name="ConnectionPoolingEnabled">true</Property>
+			<Property name="LDAPConnectionTimeout">5000</Property>
+			<Property name="ReadTimeout"/>
+			<Property name="RetryAttempts"/>
+		</UserStoreManager>
+
+		<AuthorizationManager class="org.wso2.carbon.user.core.authorization.JDBCAuthorizationManager">
+			<Property name="AdminRoleManagementPermissions">/permission</Property>
+			<Property name="AuthorizationCacheEnabled">true</Property>
+			<Property name="GetAllRolesOfUserEnabled">false</Property>
+		</AuthorizationManager>
+	</Realm>
+</UserManager>
