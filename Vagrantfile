@@ -8,7 +8,7 @@ Vagrant.configure("2") do |vagrant|
 
     config.vm.synced_folder ".", "/vagrant", disabled: true
 
-    config.vm.network "private_network", ip: "10.38.9.10"
+    config.vm.network "private_network", ip: "10.55.0.10"
 
     config.vm.provider "virtualbox" do |v|
       v.name = "sso-ldap1"
@@ -46,6 +46,12 @@ Vagrant.configure("2") do |vagrant|
 		  #ansible.verbose = "v"
 		  ansible.compatibility_mode = "2.0"
 		  ansible.playbook = "master-2.yml"
+	  end
+
+	  config.vm.provision "acis", type: "ansible", run: "never" do |ansible|
+		  ansible.compatibility_mode = "2.0"
+		  ansible.playbook = "master-2.yml"
+		  ansible.tags = ['acis']
 	  end
   end
 
