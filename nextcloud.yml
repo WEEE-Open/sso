@@ -6,9 +6,6 @@
     # ansible-galaxy install -p roles geerlingguy.php &&
     # ansible-galaxy install -p roles geerlingguy.nginx &&
     # ansible-galaxy install -p roles bertvv.mariadb &&
-    - role: linuxhq.ius
-      ius_repository_ius: true
-      when: false
     - role: bertvv.mariadb
       become: true
       mariadb_bind_address: '0.0.0.0'
@@ -22,18 +19,21 @@
           host: "127.0.0.1"
     - role: geerlingguy.php
       become: true
-      php_enablerepo: "ius"
+      php_version: "7.3"  # Does nothing
+      php_webserver_daemon: "nginx"
       php_packages:
-        - php72u-cli
-        - php72u-common
-        - php72u-fpm
-        - php72u-gd
-        - php72u-json
-        - php72u-mbstring
-        - php72u-mysqlnd
-        - php72u-opcache
-        - php72u-pdo
-        - php72u-xml
+        - php-cli
+        - php-common
+        - php-fpm
+        - php-gd
+        - php-json
+        - php-mbstring
+        - php-mysqlnd
+        - php-opcache
+        - php-pdo
+        - php-xml
+        - php-posix
+        - php-apc
       php_disable_functions:
         - exec
         - passthru
@@ -44,7 +44,7 @@
         - parse_ini_file
         - show_source
       php_enable_php_fpm: true
-      php_enable_apc: false
+      php_enable_apc: true
       php_memory_limit: "64M"
       php_expose_php: "Off"
       php_date_timezone: "Europe/Rome"
@@ -65,7 +65,7 @@
       - listen: "80"
         server_name: "nextcloud.sso.local"
         index: "index.html"
-        root: "/usr/share/nginx/html/nextcloud"
+        root: "/var/www/html/nextcloud"
         template: "{{ nginx_vhost_template }}"
         filename: "nextcloud.conf"
         extra_parameters: |
