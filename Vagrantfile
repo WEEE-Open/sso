@@ -95,4 +95,25 @@ Vagrant.configure("2") do |vagrant|
 		  ansible.playbook = "wso2.yml"
 	  end
   end
+
+  vagrant.vm.define "nextcloud" do |config|
+	  config.vm.box = "bento/centos-7"
+	  config.vm.hostname = "nextcloud.sso.local"
+
+	  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+	  config.vm.network "private_network", ip: "10.55.0.40"
+
+	  config.vm.provider "virtualbox" do |v|
+		  v.name = "nextcloud-sso"
+		  #v.customize ["modifyvm", :id, "--memory", "2048"]
+		  #v.customize ["modifyvm", :id, "--cpus", "2"]
+	  end
+
+	  config.vm.provision "ansible" do |ansible|
+		  #ansible.verbose = "v"
+		  ansible.compatibility_mode = "2.0"
+		  ansible.playbook = "nextcloud.yml"
+	  end
+  end
 end
