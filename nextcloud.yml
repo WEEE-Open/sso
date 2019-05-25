@@ -39,6 +39,7 @@
         - php-xml
         - php-posix
         - php-apc
+        - php-imagick
       php_disable_functions:
         - exec
         - passthru
@@ -202,3 +203,9 @@
     - { "owner": "root", path: "/var/lib/php/opcache/" }
     - { "owner": "root", path: "/var/lib/php/wsdlcache/" }
     - { "owner": "php-fpm", path: "/var/lib/php/session/" }
+
+  - name: Enable Nextcloud cron job
+    cron:
+      name: "nextcloud"
+      minute: "*/15"
+      job: "php -f /var/www/html/nextcloud/cron.php"
