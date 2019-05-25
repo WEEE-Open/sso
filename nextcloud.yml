@@ -4,6 +4,7 @@
   roles:
     # ansible-galaxy install -p roles linuxhq.ius &&
     # ansible-galaxy install -p roles geerlingguy.php &&
+    # ansible-galaxy install -p roles geerlingguy.repo-remi &&
     # ansible-galaxy install -p roles geerlingguy.nginx &&
     # ansible-galaxy install -p roles bertvv.mariadb &&
     - role: bertvv.mariadb
@@ -17,14 +18,18 @@
           password: nextcloud
           priv: "nextcloud_db.*:ALL,GRANT"
           host: "127.0.0.1"
+    - role: geerlingguy.repo-remi
+      become: true
     - role: geerlingguy.php
       become: true
-      php_version: "7.3"  # Does nothing
       php_webserver_daemon: "nginx"
+      php_enablerepo: "remi-php73"
       php_packages:
         - php-cli
         - php-common
         - php-fpm
+        - php-zip
+        - php-intl
         - php-gd
         - php-json
         - php-mbstring
@@ -64,13 +69,25 @@
       nginx_vhosts:
       - listen: "80"
         server_name: "nextcloud.sso.local"
+        return: "301 https://$server_name$request_uri"
+        filename: "nextcloud_80_redirect.conf"
+      - listen: "443 ssl http2"
+        server_name: "nextcloud.sso.local"
         index: "index.html"
         root: "/var/www/html/nextcloud"
-        template: "{{ nginx_vhost_template }}"
         filename: "nextcloud.conf"
+        # mkdir /etc/ssl/nginx
+        # cd /etc/ssl/nginx
+        # openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout nextcloud.sso.local.key -out nextcloud.sso.local.pem
+        # chmod -R 640 .
+        # chmod 550 .
+        # chown root:nginx -R .
         extra_parameters: |
           # Taken from:
           # https://docs.nextcloud.com/server/16/admin_manual/installation/nginx.html
+
+          ssl_certificate /etc/ssl/nginx/nextcloud.sso.local.pem;
+          ssl_certificate_key /etc/ssl/nginx/nextcloud.sso.local.key;
 
           # set max upload size
           client_max_body_size 512M;
@@ -165,3 +182,23 @@
   - name: Set hosts file
     copy: src=hosts dest=/etc/hosts owner=root group=root
     become: true
+
+  tasks:
+  # These came in the php-fpm-7.3.5-1.el7.remi package and have apache
+  # instead of php-fpm as the group/owner...
+  # This causes Nextcloud to loop on login, without any error logged
+  # ANYWHERE.
+  # The solution was here: https://help.nextcloud.com/t/login-loop-with-nextcloud12-fresh-install/21185/7
+  # except that php-fpm is running with the php-fpm user here, so nginx
+  # user wasn't the answer.
+  - name: Fix permissions on some directories for php-fpm
+    file:
+      path: "{{ item.path }}"
+      state: directory
+      recurse: yes
+      owner: "{{ item.owner }}"
+      group: "php-fpm"
+    loop:
+    - { "owner": "root", path: "/var/lib/php/opcache/" }
+    - { "owner": "root", path: "/var/lib/php/wsdlcache/" }
+    - { "owner": "php-fpm", path: "/var/lib/php/session/" }
