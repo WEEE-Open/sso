@@ -31,6 +31,7 @@
         - php-zip
         - php-intl
         - php-gd
+        - php-ldap
         - php-json
         - php-mbstring
         - php-mysqlnd
@@ -205,7 +206,9 @@
     - { "owner": "php-fpm", path: "/var/lib/php/session/" }
 
   - name: Enable Nextcloud cron job
+    become: true
     cron:
-      name: "nextcloud"
+      name: nextcloud
+      user: php-fpm
       minute: "*/15"
       job: "php -f /var/www/html/nextcloud/cron.php"
