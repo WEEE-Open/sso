@@ -24,6 +24,7 @@
 
     wso2is_admin: wso2admin
     wso2is_admin_password: asd
+    wso2is_hostname: "{{ ansible_fqdn }}"
     wso2is_ldap_url: "ldap://ldap1.sso.local:389" # TODO: ldaps
     wso2is_version: "5.7.0"
     wso2is_account: "cn=WSO2IS,ou=Services,{{ dirsrv_suffix }}"
@@ -77,10 +78,20 @@
       mode: 0755
     become: true
 
-  - name: Deploy user-mgt.xml.j2
+  - name: Deploy user-mgt.xml
     template:
       src: wso2/user-mgt.xml.j2
       dest: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/user-mgt.xml"
+      owner: wso2
+      group: wso2
+      mode: 0440
+    become: true
+    notify: restart WSO2IS
+
+  - name: Deploy carbon.xml
+    template:
+      src: wso2/carbon.xml.j2
+      dest: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/carbon.xml"
       owner: wso2
       group: wso2
       mode: 0440
