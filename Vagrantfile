@@ -20,10 +20,10 @@ Vagrant.configure("2") do |vagrant|
       ansible.playbook = "master-1.yml"
     end
 
-	config.vm.provision "acis", type: "ansible", run: "never" do |ansible|
+	config.vm.provision "policy", type: "ansible", run: "never" do |ansible|
 		ansible.compatibility_mode = "2.0"
 		ansible.playbook = "master-1.yml"
-		ansible.tags = ['acis']
+		ansible.tags = ['policy']
 	end
   end
 
@@ -48,10 +48,10 @@ Vagrant.configure("2") do |vagrant|
 		  ansible.playbook = "master-2.yml"
 	  end
 
-	  config.vm.provision "acis", type: "ansible", run: "never" do |ansible|
+	  config.vm.provision "policy", type: "ansible", run: "never" do |ansible|
 		  ansible.compatibility_mode = "2.0"
 		  ansible.playbook = "master-2.yml"
-		  ansible.tags = ['acis']
+		  ansible.tags = ['policy']
 	  end
   end
 
