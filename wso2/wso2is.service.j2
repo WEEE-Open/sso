@@ -4,15 +4,20 @@ After=network.target
 
 [Service]
 Environment="JAVA_HOME=/usr/lib/jvm/jre-1.8.0-openjdk"
-Type=forking
 PIDFile=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/wso2carbon.pid
-ExecStart=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/bin/wso2server.sh start
-ExecRestart=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/bin/wso2server.sh restart
-ExecStop=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/bin/wso2server.sh stop
+Type=simple
+ExecStart=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/bin/wso2server.sh run
+ExecStop=/bin/kill -15 $MAINPID
+# Logs go directly to /dev/null with this one, it's useless:
+#Type=forking
+#ExecStart=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/bin/wso2server.sh start
+#ExecRestart=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/bin/wso2server.sh restart
+#ExecStop=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/bin/wso2server.sh stop
 User=wso2
 Group=wso2
 PrivateTmp=true
 Restart=on-failure
+StandardOutput=journal
 
 [Install]
 WantedBy=multi-user.target
