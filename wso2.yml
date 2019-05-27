@@ -58,6 +58,62 @@
       shell: /sbin/nologin
     become: true
 
+  # Created like this, but already included in this repo:
+  # cd /usr/lib64/wso2/wso2is/5.7.0/repository/resources/security/
+  # keytool -delete -keystore wso2carbon.jks -storepass wso2carbon -alias wso2carbon
+  # keytool -genkeypair -keystore wso2carbon.jks -dname "CN=wso2.sso.local, OU=Whatever, O=Example, C=US" -keypass wso2carbon -storepass wso2carbon -keyalg RSA -alias wso2carbon
+  # keytool -export -alias wso2carbon -file wso2carbon.cer -keystore wso2carbon.jks -storepass wso2carbon
+  # keytool -delete -keystore client-truststore.jks -storepass wso2carbon -alias wso2carbon
+  # keytool -importcert -file wso2carbon.cer -keystore client-truststore.jks -storepass wso2carbon -alias wso2carbon
+  # keytool -importkeystore -srckeystore wso2carbon.jks -destkeystore wso2carbon.p12 -srcstoretype JKS -deststoretype PKCS12 -srcstorepass wso2carbon -deststorepass wso2carbon -srcalias wso2carbon -destalias wso2carbon -srckeypass wso2carbon
+  - name: Copy PKCS12 certificate + key to the server
+    copy:
+      src: wso2/wso2carbon.p12
+      dest: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.p12"
+      owner: root
+      group: wso2
+      mode: 0640
+      setype: cert_t
+    become: true
+
+  - name: Check if default certificate is in keystore
+    shell: "keytool -list -v -keystore /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks -storepass wso2carbon -keypass wso2carbon -alias wso2carbon | grep localhost"
+    become: true
+    register: wso2is_keystore_grep
+    failed_when: "'rc' not in wso2is_keystore_grep or wso2is_keystore_grep.rc|int > 1 or wso2is_keystore_grep.rc|int < 1"
+    changed_when: false
+
+  - name: Remove default keystore
+    file:
+      path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks"
+      state: absent
+    become: true
+    when: wso2is_keystore_grep.rc|int == 0
+
+  - name: Create new keystore
+    java_cert:
+      pkcs12_path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.p12"
+      cert_alias: wso2carbon
+      keystore_path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks"
+      keystore_pass: wso2carbon
+      pkcs12_password: wso2carbon
+      pkcs12_alias: wso2carbon
+      keystore_create: yes
+      state: present
+    become: true
+    notify: restart WSO2IS
+
+  - name: Change permissions of WSO2 keystore
+    file:
+      path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks"
+      state: file
+      owner: root
+      group: wso2
+      mode: 0640
+      setype: cert_t
+    become: true
+
+  # TODO: this overrides root:wso2 files
   - name: Change the owner of WSO2 directory
     file:
       path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}"
@@ -65,8 +121,16 @@
       recurse: true
       owner: wso2
       group: wso2
-      mode: 0755
     become: true
+
+  # Also, this may be useful:
+  #
+  # keytool -genkeypair -keystore wso2carbon.jks -dname "CN=SAML2 Response Signing Certificate,OU=Services,O=Example,C=US" -keypass wso2carbon -storepass wso2carbon -keyalg RSA -validity 3650 -alias saml2
+  # keytool -export -file saml2.cer -keystore wso2carbon.jks -storepass wso2carbon -alias saml2
+  # keytool -importcert -file saml2.cer -keystore client-truststore.jks -storepass wso2carbon -alias saml2
+  # openssl x509 -in saml2.cer -inform der -outform pem -out saml2.pem
+  #
+  # But it cannot go into the wso2carbon.jks keystore, since one certificate + key is picked at random from there to be the TLS certificate (yep, the alias is ignored)
 
   - name: Deploy user-mgt.xml
     template:
@@ -82,6 +146,16 @@
     template:
       src: wso2/carbon.xml.j2
       dest: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/carbon.xml"
+      owner: wso2
+      group: wso2
+      mode: 0440
+    become: true
+    notify: restart WSO2IS
+
+  - name: Deploy catalina-server.xml
+    template:
+      src: wso2/catalina-server.xml.j2
+      dest: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/tomcat/catalina-server.xml"
       owner: wso2
       group: wso2
       mode: 0440
