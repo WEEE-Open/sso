@@ -7,3 +7,4 @@ schema
 ca/*.pem
 ca/*.key
 ca/*.bin
+wso2/wso2carbon.cer

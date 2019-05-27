@@ -63,27 +63,41 @@
   # keytool -delete -keystore wso2carbon.jks -storepass wso2carbon -alias wso2carbon
   # keytool -genkeypair -keystore wso2carbon.jks -dname "CN=wso2.sso.local, OU=Whatever, O=Example, C=US" -keypass wso2carbon -storepass wso2carbon -keyalg RSA -alias wso2carbon
   # keytool -export -alias wso2carbon -file wso2carbon.cer -keystore wso2carbon.jks -storepass wso2carbon
-  # keytool -delete -keystore client-truststore.jks -storepass wso2carbon -alias wso2carbon
-  # keytool -importcert -file wso2carbon.cer -keystore client-truststore.jks -storepass wso2carbon -alias wso2carbon
+  # ( these 2 should be handled by Ansible, maybe, possibly, if it works... )
+  # ( keytool -delete -keystore client-truststore.jks -storepass wso2carbon -alias wso2carbon )
+  # ( keytool -importcert -file wso2carbon.cer -keystore client-truststore.jks -storepass wso2carbon -alias wso2carbon )
   # keytool -importkeystore -srckeystore wso2carbon.jks -destkeystore wso2carbon.p12 -srcstoretype JKS -deststoretype PKCS12 -srcstorepass wso2carbon -deststorepass wso2carbon -srcalias wso2carbon -destalias wso2carbon -srckeypass wso2carbon
   #
-  # Also, it's recommended to use a different certificate for SAML and TLS stuff:
+  # And this, which you should replace with a certificate from a trusted CA (e.g. Let's Encrypt) or browsers will complain:
+  # cd /usr/lib64/wso2/wso2is/5.7.0/repository/resources/security/
+  # keytool -genkeypair -keystore tls.jks -dname "CN=wso2.sso.local, OU=TLS, O=Example, C=US" -keypass tlstlstls -storepass tlstlstls -keyalg RSA -alias tls
+  # keytool -export -alias tls -file tls.cer -keystore tls.jks -storepass tlstlstls
+  # keytool -importkeystore -srckeystore tls.jks -destkeystore tls.p12 -srcstoretype JKS -deststoretype PKCS12 -srckeypass tlstlstls -srcstorepass tlstlstls -deststorepass tlstlstls -srcalias tls -destalias tls
+  #
+  # May be useful for SAML configuration and stuff:
+  # openssl x509 -in wso2carbon.cer -inform der -outform pem -out wso2carbon.pem
+  #
+  # It's recommended to use a different certificate for SAML and TLS stuff:
   # http://xacmlinfo.org/2015/09/01/configure-keystore-jks-files-in-wso2-products/
   # https://stackoverflow.com/q/43015273
-  # This *can* be done. I did it in the wso2-dual-cert.yml playbook and took the best part of a day.
-  # However, apparently it breaks the dashboard. I need to test this part more.
+  # And we're going to do just that.
   - name: Copy PKCS12 certificate + key to the server
     copy:
-      src: wso2/wso2carbon.p12
-      dest: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.p12"
+      src: wso2/{{ item }}
+      dest: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/
       owner: root
       group: wso2
       mode: 0640
       setype: cert_t
     become: true
+    loop:
+      - wso2carbon.p12
+      - wso2carbon.cer
+      - tls.p12
+      - tls.cer
 
   - name: Check if default certificate is in keystore
-    shell: "keytool -list -v -keystore /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks -storepass wso2carbon -keypass wso2carbon -alias wso2carbon | grep localhost"
+    shell: keytool -list -v -keystore /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks -storepass wso2carbon -keypass wso2carbon -alias wso2carbon | grep localhost
     become: true
     register: wso2is_keystore_grep
     failed_when: "'rc' not in wso2is_keystore_grep or wso2is_keystore_grep.rc|int > 1 or wso2is_keystore_grep.rc|int < 1"
@@ -91,16 +105,16 @@
 
   - name: Remove default keystore
     file:
-      path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks"
+      path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks
       state: absent
     become: true
     when: wso2is_keystore_grep.rc|int == 0
 
-  - name: Create new keystore
+  - name: Create wso2carbon keystore
     java_cert:
-      pkcs12_path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.p12"
+      pkcs12_path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.p12
       cert_alias: wso2carbon
-      keystore_path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks"
+      keystore_path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks
       keystore_pass: wso2carbon
       pkcs12_password: wso2carbon
       pkcs12_alias: wso2carbon
@@ -109,27 +123,46 @@
     become: true
     notify: restart WSO2IS
 
-  # TODO: This is doing absolutely nothing, apparently
+  - name: Create TLS keystore
+    java_cert:
+      pkcs12_path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/tls.p12
+      cert_alias: tls
+      keystore_path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/tls.jks
+      keystore_pass: tlstlstls
+      pkcs12_password: tlstlstls
+      pkcs12_alias: tls
+      keystore_create: yes
+      state: present
+    become: true
+    notify: restart WSO2IS
+
+  # TODO: This is doing absolutely nothing, apparently (they aren't added)
   - name: Trust our certificates
     java_cert:
-      cert_path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.cer"
+      cert_path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/{{ item }}
       cert_alias: wso2carbon
-      keystore_path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/client-truststore.jks"
+      keystore_path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/client-truststore.jks
       keystore_pass: wso2carbon
       keystore_create: false
       state: present
     become: true
     notify: restart WSO2IS
+    loop:
+      - wso2carbon.cer
+      - tls.cer
 
-  - name: Change permissions of WSO2 keystore
+  - name: Change keystore permissions
     file:
-      path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks"
+      path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/{{ item }}
       state: file
       owner: root
       group: wso2
       mode: 0640
       setype: cert_t
     become: true
+    loop:
+      - wso2carbon.jks
+      - tls.jks
 
   # TODO: this overrides root:wso2 files
   - name: Change the owner of WSO2 directory
@@ -140,15 +173,6 @@
       owner: wso2
       group: wso2
     become: true
-
-  # Also, this may be useful:
-  #
-  # keytool -genkeypair -keystore wso2carbon.jks -dname "CN=SAML2 Response Signing Certificate,OU=Services,O=Example,C=US" -keypass wso2carbon -storepass wso2carbon -keyalg RSA -validity 3650 -alias saml2
-  # keytool -export -file saml2.cer -keystore wso2carbon.jks -storepass wso2carbon -alias saml2
-  # keytool -importcert -file saml2.cer -keystore client-truststore.jks -storepass wso2carbon -alias saml2
-  # openssl x509 -in saml2.cer -inform der -outform pem -out saml2.pem
-  #
-  # But it cannot go into the wso2carbon.jks keystore, since one certificate + key is picked at random from there to be the TLS certificate (yep, the alias is ignored)
 
   - name: Deploy user-mgt.xml
     template:
