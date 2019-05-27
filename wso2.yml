@@ -66,6 +66,12 @@
   # keytool -delete -keystore client-truststore.jks -storepass wso2carbon -alias wso2carbon
   # keytool -importcert -file wso2carbon.cer -keystore client-truststore.jks -storepass wso2carbon -alias wso2carbon
   # keytool -importkeystore -srckeystore wso2carbon.jks -destkeystore wso2carbon.p12 -srcstoretype JKS -deststoretype PKCS12 -srcstorepass wso2carbon -deststorepass wso2carbon -srcalias wso2carbon -destalias wso2carbon -srckeypass wso2carbon
+  #
+  # Also, it's recommended to use a different certificate for SAML and TLS stuff:
+  # http://xacmlinfo.org/2015/09/01/configure-keystore-jks-files-in-wso2-products/
+  # https://stackoverflow.com/q/43015273
+  # This *can* be done. I did it in the wso2-dual-cert.yml playbook and took the best part of a day.
+  # However, apparently it breaks the dashboard. I need to test this part more.
   - name: Copy PKCS12 certificate + key to the server
     copy:
       src: wso2/wso2carbon.p12
@@ -99,6 +105,18 @@
       pkcs12_password: wso2carbon
       pkcs12_alias: wso2carbon
       keystore_create: yes
+      state: present
+    become: true
+    notify: restart WSO2IS
+
+  # TODO: This is doing absolutely nothing, apparently
+  - name: Trust our certificates
+    java_cert:
+      cert_path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.cer"
+      cert_alias: wso2carbon
+      keystore_path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/client-truststore.jks"
+      keystore_pass: wso2carbon
+      keystore_create: false
       state: present
     become: true
     notify: restart WSO2IS
