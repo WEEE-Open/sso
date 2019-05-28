@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Environment="JAVA_HOME=/usr/lib/jvm/jre-1.8.0-openjdk"
-Environment="JAVA_OPTS=-Dorg.opensaml.httpclient.https.disableHostnameVerification=true -Dhttpclient.hostnameVerifier=\"AllowAll\""
+# Environment="JAVA_OPTS=-Dorg.opensaml.httpclient.https.disableHostnameVerification=true -Dhttpclient.hostnameVerifier=\"AllowAll\""
 PIDFile=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/wso2carbon.pid
 Type=simple
 ExecStart=/usr/lib64/wso2/wso2is/{{ wso2is_version }}/bin/wso2server.sh run

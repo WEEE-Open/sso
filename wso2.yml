@@ -8,6 +8,7 @@
     wso2is_admin: wso2admin
     wso2is_admin_password: asd
     wso2is_hostname: "{{ ansible_fqdn }}"
+    wso2is_hostname_and_port: "{{ wso2is_hostname }}:9443"
     wso2is_ldap_url: "ldap://ldap1.sso.local:389" # TODO: ldaps
     wso2is_version: "5.7.0"
     wso2is_account: "cn=WSO2IS,ou=Services,{{ dirsrv_suffix }}"
@@ -136,20 +137,26 @@
     become: true
     notify: restart WSO2IS
 
-  # TODO: This is doing absolutely nothing, apparently (they aren't added)
-  - name: Trust our certificates
-    java_cert:
-      cert_path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/{{ item }}
-      cert_alias: wso2carbon
-      keystore_path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/client-truststore.jks
-      keystore_pass: wso2carbon
-      keystore_create: false
-      state: present
+  # The java_cert module was doing absolutely nothing: doesn't change the certificate if it changed, doesn't add the certificates, does nothing.
+  # It just stands there, gazes into the keystore and then concludes "yep, there's a keystore with that name. Nothing to do here!"
+  - name: Un-trust our certificates
+    command: keytool -delete -keystore /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/client-truststore.jks -storepass wso2carbon -alias {{ item }}
+    changed_when: false
     become: true
-    notify: restart WSO2IS
+    register: wso2is_keytool_result
+    # "keytool error: java.lang.Exception: Alias <tls> does not exist"
+    failed_when: "wso2is_keytool_result.rc|int != 0 and not wso2is_keytool_result.stdout.startswith('keytool error: java.lang.Exception: Alias ')"
     loop:
-      - wso2carbon.cer
-      - tls.cer
+      - wso2carbon
+      - tls
+
+  - name: Trust our certificates
+    command: keytool -importcert -noprompt -keystore /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/client-truststore.jks -file /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/{{ item }}.cer -storepass wso2carbon -alias {{ item }}
+    become: true
+    changed_when: false
+    loop:
+      - wso2carbon
+      - tls
 
   - name: Change keystore permissions
     file:
@@ -167,7 +174,7 @@
   # TODO: this overrides root:wso2 files
   - name: Change the owner of WSO2 directory
     file:
-      path: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}"
+      path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}
       state: directory
       recurse: true
       owner: wso2
@@ -177,7 +184,7 @@
   - name: Deploy user-mgt.xml
     template:
       src: wso2/user-mgt.xml.j2
-      dest: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/user-mgt.xml"
+      dest: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/user-mgt.xml
       owner: wso2
       group: wso2
       mode: 0440
@@ -187,7 +194,7 @@
   - name: Deploy carbon.xml
     template:
       src: wso2/carbon.xml.j2
-      dest: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/carbon.xml"
+      dest: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/carbon.xml
       owner: wso2
       group: wso2
       mode: 0440
@@ -197,12 +204,26 @@
   - name: Deploy catalina-server.xml
     template:
       src: wso2/catalina-server.xml.j2
-      dest: "/usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/tomcat/catalina-server.xml"
+      dest: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/tomcat/catalina-server.xml
       owner: wso2
       group: wso2
       mode: 0440
     become: true
     notify: restart WSO2IS
+
+  # https://github.com/wso2/carbon-identity-framework/pull/2008
+  - name: Deploy application-authentication.xml
+    template:
+      src: wso2/application-authentication.xml.j2
+      dest: "{{ item }}"
+      owner: wso2
+      group: wso2
+      mode: 0440
+    become: true
+    notify: restart WSO2IS
+    loop:
+    - /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/identity/application-authentication.xml
+    - /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/components/features/org.wso2.carbon.identity.application.authentication.framework.server_5.12.153/
 
   - name: Disable embedded LDAP
     copy:
@@ -219,12 +240,9 @@
       src: "wso2/wso2is.service.j2"
       dest: /etc/systemd/system/wso2is.service
     become: true
-    register: wso2is_service
-
-  - name: "Reload systemctl daemon"
-    command: systemctl daemon-reload
-    become: true
-    when: wso2is_service.changed
+    notify:
+      - systemctl daemon-reload
+      - restart WSO2IS
 
   - name: "Start wso2-is as a service"
     service:
@@ -234,6 +252,10 @@
     become: true
 
   handlers:
+  - name: systemctl daemon-reload
+    command: systemctl daemon-reload
+    become: true
+
   - name: restart WSO2IS
     service:
       name: wso2is
