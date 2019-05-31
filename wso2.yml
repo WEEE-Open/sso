@@ -201,6 +201,16 @@
     become: true
     notify: restart WSO2IS
 
+  - name: Deploy identity.xml
+    template:
+      src: wso2/identity.xml.j2
+      dest: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/conf/identity/identity.xml
+      owner: wso2
+      group: wso2
+      mode: 0440
+    become: true
+    notify: restart WSO2IS
+
   - name: Deploy catalina-server.xml
     template:
       src: wso2/catalina-server.xml.j2
