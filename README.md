@@ -63,6 +63,19 @@ but you will need to perform a total reinit with `nsds5BeginReplicaRefresh: star
 on mm1, just follow the readme. It also contains some details on how the servers
 and TLS are configured.
 
+### WSO2 IS configuration files
+
+This is what changed from default in each file:
+
+* application-authentication.xml: configure `<AuthenticatorConfig name="totp" enabled="true">` section
+* carbon.xml: set `<HostName>` and `<MgtHostName>`
+* catalina-server.xml: change enabled protocols and keystore location & password
+* embedded-ldap.xml: disable it entirely
+* identity.xml: this `<Resource context="(.*)/.well-known(.*)" secured="false" http-method="all"/>` and disable consent management
+* user-mgt.xml: configure external LDAP user store
+
+When a new version is released, rather than keeping the old configuration files, it's better to grab fresh ones from the updated server and apply changes again. This may break some stuff, but it's probably better than being the only person on the planet to still have *that* option set to false from 10 releases ago and it causes random errors that nobody else on the Internet has ever mentioned...
+
 ## License
 
 MIT unless otherwise noted (some of the involved software and Ansible roles have a different license)

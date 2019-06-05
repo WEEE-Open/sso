@@ -10,14 +10,20 @@
     wso2is_hostname: "{{ ansible_fqdn }}"
     wso2is_hostname_and_port: "{{ wso2is_hostname }}:9443"
     wso2is_ldap_url: "ldap://ldap1.sso.local:389" # TODO: ldaps
-    wso2is_version: "5.7.0"
+    wso2is_version: "5.8.0"
     wso2is_account: "cn=WSO2IS,ou=Services,{{ dirsrv_suffix }}"
     wso2is_account_password: "asd"
     wso2is_people_base: "ou=People,{{ dirsrv_suffix }}"
     wso2is_user_entry_object_class: "weeeOpenPerson"
-    wso2is_user_dn_pattern: "uid={0},ou=People,{{ dirsrv_suffix }}"
     wso2is_groups_base: "ou=Groups,{{ dirsrv_suffix }}"
-    wso2is_groups_dn_pattern: "uid={0},ou=Groups,{{ dirsrv_suffix }}"
+    # These may speed up searches, but building DNs instead of searching is
+    # generally a bad idea. In fact, they don't work: WSO2 decided to show
+    # (or I configured it to, can't remember) users as "johndoe|John Doe",
+    # with uid, then a |, then cn. Despite knowing that the uid is the uid,
+    # it still replaces {0} with "johndoe|John Doe" in these expressions:
+    # wso2is_user_dn_pattern: "uid={0},ou=People,{{ dirsrv_suffix }}"
+    # wso2is_groups_dn_pattern: "uid={0},ou=Groups,{{ dirsrv_suffix }}"
+    # They weren't mandatory anyway.
 
   pre_tasks:
   - name: Set hosts file
@@ -42,6 +48,12 @@
     yum:
       name: wso2is-{{ wso2is_version }}
       state: present
+    become: true
+
+  - name: Remove old WSO2 IS
+    yum:
+      name: wso2is-5.7.0
+      state: absent
     become: true
 
   - name: Create WSO2 group
@@ -101,7 +113,7 @@
     shell: keytool -list -v -keystore /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/wso2carbon.jks -storepass wso2carbon -keypass wso2carbon -alias wso2carbon | grep localhost
     become: true
     register: wso2is_keystore_grep
-    failed_when: "'rc' not in wso2is_keystore_grep or wso2is_keystore_grep.rc|int > 1 or wso2is_keystore_grep.rc|int < 1"
+    failed_when: "'rc' not in wso2is_keystore_grep or wso2is_keystore_grep.rc|int > 1 or wso2is_keystore_grep.rc|int < 0"
     changed_when: false
 
   - name: Remove default keystore
@@ -171,13 +183,12 @@
       - wso2carbon.jks
       - tls.jks
 
-  # TODO: this overrides root:wso2 files
   - name: Change the owner of WSO2 directory
     file:
       path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}
       state: directory
       recurse: true
-      owner: wso2
+      owner: root
       group: wso2
     become: true
 

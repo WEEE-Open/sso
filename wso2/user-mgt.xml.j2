@@ -40,14 +40,14 @@
 			<Property name="UserNameAttribute">uid</Property>
 			<Property name="UserNameSearchFilter">(&amp;(objectClass=person)(uid=?))</Property>
 			<Property name="UserNameListFilter">(objectClass=person)</Property>
-			<Property name="UserDNPattern">{{ wso2is_user_dn_pattern }}</Property>
+			<!--Property name="UserDNPattern"> wso2is_user_dn_pattern </Property-->
 			<Property name="DisplayNameAttribute">cn</Property>
 			<Property name="ReadGroups">true</Property>
 			<Property name="WriteGroups">true</Property>RoleDNPattern
 			<Property name="GroupSearchBase">{{ wso2is_groups_base }}</Property>
 			<Property name="GroupEntryObjectClass">groupOfNames</Property>
 			<Property name="GroupNameAttribute">cn</Property>
-			<Property name="RoleDNPattern">{{ wso2is_groups_dn_pattern }}</Property>
+			<!--Property name="RoleDNPattern"> wso2is_groups_dn_pattern </Property-->
 			<Property name="GroupNameSearchFilter">(&amp;(objectClass=groupOfNames)(cn=?))</Property>
 			<Property name="GroupNameListFilter">(objectClass=groupOfNames)</Property>
 			<Property name="MembershipAttribute">member</Property>
