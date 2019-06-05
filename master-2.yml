@@ -25,6 +25,28 @@
       dirsrv_password_storage_scheme: "PBKDF2_SHA256"
       dirsrv_plugins_enabled:
         MemberOf Plugin: true
+      dirsrv_logging:
+        audit:
+          enabled: true
+          logrotationtimeunit: day
+          logmaxdiskspace: 400
+          maxlogsize: 200
+          maxlogsperdir: 7
+          mode: 600
+        access:
+          enabled: true
+          logrotationtimeunit: day
+          logmaxdiskspace: 400
+          maxlogsize: 200
+          maxlogsperdir: 7
+          mode: 600
+        error:
+          enabled: true
+          logrotationtimeunit: day
+          logmaxdiskspace: 400
+          maxlogsize: 200
+          maxlogsperdir: 7
+          mode: 600
       dirsrv_custom_schema:
       - "schema/97schac.ldif"
       - "schema/98ssh.ldif"
