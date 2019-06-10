@@ -98,7 +98,7 @@
     copy:
       src: wso2/{{ item }}
       dest: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/
-      owner: root
+      owner: wso2
       group: wso2
       mode: 0640
       setype: cert_t
@@ -174,7 +174,7 @@
     file:
       path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}/repository/resources/security/{{ item }}
       state: file
-      owner: root
+      owner: wso2
       group: wso2
       mode: 0640
       setype: cert_t
@@ -188,7 +188,7 @@
       path: /usr/lib64/wso2/wso2is/{{ wso2is_version }}
       state: directory
       recurse: true
-      owner: root
+      owner: wso2
       group: wso2
     become: true
 
