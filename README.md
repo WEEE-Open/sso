@@ -68,7 +68,7 @@ and TLS are configured.
 This is what changed from default in each file:
 
 * application-authentication.xml: configure `<AuthenticatorConfig name="totp" enabled="true">` section
-* carbon.xml: set `<HostName>` and `<MgtHostName>`
+* carbon.xml: set `<HostName>` and `<MgtHostName>`, disable `<HideAdminServiceWSDLs>`
 * catalina-server.xml: change enabled protocols and keystore location & password
 * embedded-ldap.xml: disable it entirely
 * identity.xml: this `<Resource context="(.*)/.well-known(.*)" secured="false" http-method="all"/>` and disable consent management
