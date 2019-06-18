@@ -61,6 +61,8 @@
       dirsrv_replication_user_password_remote: "icauvaelae3reixeiP9ahgh0ei" # On the other server
       dirsrv_consumer_uri: "ldap://ldap2.sso.local:389/" # The other server
       dirsrv_supplier_replica_id: 1
+      dirsrv_replica_attributes_list: "(objectclass=*) $ EXCLUDE memberof"
+      dirsrv_replica_attributes_list_total: []
 
   tasks:
   - block:
