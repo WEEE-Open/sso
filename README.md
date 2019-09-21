@@ -1,20 +1,27 @@
 # SSO
 
-Attempt to build a SSO system with WSO2 IS, 389DS and MariaDB (feat. Vagrant & Ansible)
+Attempt at an SSO system with WSO2 IS and 389DS (feat. Vagrant & Ansible)
 
-**Heavily work in progress.**
+**This repo is not maintained** since we ended up using Keycloak instead of
+WSO2 IS in production. However, it may still be useful to people
+that want to set up WSO2 IS with an external LDAP server.
+
+The production Keycloak configuration will be made public in the future,
+possibly along a development/test environment managed by Vagrant to
+replace this one.
+
+In the meantime, you can take a look at some other maintained repos:
+
+* [389DS server Ansible role](https://github.com/lvps/389ds-server) (used in production)
+* [389DS replication Ansible role](https://github.com/lvps/389ds-replication)
+* [389DS examples](https://github.com/lvps/389ds-examples/)
+* [Schema files and ACIs for 389DS](https://github.com/weee-open/schema) (used in production)
 
 ## What
 
-Currently: two 389DS servers with master-master replication, 1 WSO2 IS server
-also running MariaDB for its internal database.
-
-The goal is to have a fully replicated setup: a Galera cluster for MariaDB
-replication and whatever is needed for WSO2.
-And maybe adding some HAProxy on top of it all.
-
-There are some leftovers from an attempt to use Keycloak, which may or may not
-become useful again in the future.
+The Vagrant configuration will bring up two 389DS servers with master-master
+replication, 1 WSO2 IS server, 1 web server (PHP, nginx, MariaDB) for
+Nextcloud (Nextcloud setup is not automated, however).
 
 ## How
 
@@ -53,7 +60,7 @@ Now do `vagrant up` and wait for it to bring up 3 machines:
 | wso2         | wso2.sso.local     | 10.55.0.30 |
 
 There's an `hosts` file that get deployed to the VMs, but you can use it as
-an example to edit your hosts file and reach the 389DS servers and Keycloak
+an example to edit your hosts file and reach the 389DS servers and WSO2 IS
 with their hostname instead of an IP.
 
 The 389DS setup is almost the same as in the [Multi-master with 2 masters](https://github.com/lvps/389ds-examples/#multi-master-with-2-masters)
@@ -65,7 +72,7 @@ and TLS are configured.
 
 ### WSO2 IS configuration files
 
-This is what changed from default in each file:
+Some files have been changed from thei default:
 
 * application-authentication.xml: configure `<AuthenticatorConfig name="totp" enabled="true">` section
 * carbon.xml: set `<HostName>` and `<MgtHostName>`, disable `<HideAdminServiceWSDLs>`
